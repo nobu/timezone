@@ -250,22 +250,29 @@ module Timezone
     end
 
     # Find the first rule that matches using binary search.
-    def binary_search(time, from = 0, to = nil, &block)
-      to = private_rules.length - 1 if to.nil?
-
-      return from if from == to
-
-      mid = (from + to).div(2)
-
-      unless yield(time, private_rules[mid])
-        return binary_search(time, mid + 1, to, &block)
+    if Array.method_defined?(:bsearch_index)
+      def binary_search(time)
+        rules = private_rules
+        rules.bsearch_index { |r| yield(time, r) } || rules.size - 1
       end
+    else
+      def binary_search(time, from = 0, to = nil, &block)
+        to = private_rules.length - 1 if to.nil?
 
-      return mid if mid.zero?
+        return from if from == to
 
-      return mid unless yield(time, private_rules[mid - 1])
+        mid = (from + to).div(2)
 
-      binary_search(time, from, mid - 1, &block)
+        unless yield(time, private_rules[mid])
+          return binary_search(time, mid + 1, to, &block)
+        end
+
+        return mid if mid.zero?
+
+        return mid unless yield(time, private_rules[mid - 1])
+
+        binary_search(time, from, mid - 1, &block)
+      end
     end
   end
 end
